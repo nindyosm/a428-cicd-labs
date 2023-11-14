@@ -1,23 +1,35 @@
-node {
-    def dockerImage = 'node:16-buster-slim'
-
-    stage('Build') {
-        // Start Docker Container pada stage 'Build'
-        withDockerContainer(image: dockerImage, args: '-p 3000:3000') {
-            sh 'npm install'
+pipeline {
+    agent {
+        docker {
+            image 'node:16-buster-slim'
+            args '-p 3000:3000'
         }
     }
-
-    stage('Test') {
-        // Start Docker Container pada stage 'Test'
-        withDockerContainer(image: dockerImage, args: '-p 3000:3000') {
-            sh './jenkins/scripts/test.sh'
+    stages {
+        stage('Build') {
+            steps {
+                sh 'npm install'
+            }
         }
-    }
-    stage('Deliver') {
-        // Start Docker Container pada stage 'Deliver'
-        withDockerContainer(image: dockerImage, args: '-p 3000:3000') {
-            sh './jenkins/scripts/deliver.sh'
+        stage('Test') {
+            steps {
+                sh './jenkins/scripts/test.sh'
+            }
+        }
+
+        stage('Manual Approval') {
+            steps {
+                input message: 'Lanjutkan ke tahap Deploy? (Klik "Proceed" untuk melanjutkan)' 
+            }
+        }
+
+        stage('Deploy') { 
+            steps {
+                sh './jenkins/scripts/deliver.sh' 
+                input message: 'Sudah selesai menggunakan React App? (Klik "Proceed" untuk mengakhiri)' 
+                sh 'sleep 1m'
+                sh './jenkins/scripts/kill.sh' 
+            }
         }
     }
 }
